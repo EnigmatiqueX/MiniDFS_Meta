@@ -34,7 +34,7 @@ struct TreeNode
     TreeNode* parent;
     TreeNode* firstChild;
     TreeNode* nextSibling;
-    TreeNode(std::string _value, bool _isFile): value(_value), isFile(_isFile), parent(nullptr), firstChild(nullptr), nextSibling(
+    TreeNode(string _value, bool _isFile): value(_value), isFile(_isFile), parent(nullptr), firstChild(nullptr), nextSibling(
             nullptr) {}
 };
 
@@ -42,11 +42,14 @@ class FileTree
 {
 public:
     TreeNode *root = nullptr;
-    bool find(const std::string value, bool isFile, TreeNode*& node_parent);
+    bool find(const string value, bool isFile, TreeNode*& node_parent);
 
 public:
     FileTree();
-    void insert(const std::string value, bool isFile);
+    void insert(const string value, bool isFile);
+    void cd(string& cd_path);
+    void ls(string& ls_path);
+    void locate(string& locate_path);
     void print(TreeNode * node);
     void printall();
 
