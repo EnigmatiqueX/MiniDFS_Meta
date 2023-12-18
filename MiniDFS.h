@@ -55,29 +55,36 @@ extern vector<bool> dataNotified;
 
 extern bool isTrueCmd;
 
-enum class OperType {put,read,mkdir,put2,read2,fetch,fetch2};
+
+// Operation type and Metadata Type
+enum class OperType {put, read, mkdir, put2, read2, fetch, fetch2, cd, ls, locate};
 
 enum class MetaType {id_file, file_block, block_server, current_id, file_len};
+
 
 extern OperType type;
 extern int fileID;
 
+// Read
 extern int read_fileId;
 extern string read_filename;
 extern long long read_offset;
 extern int read_count;
 
-extern int server_executing_read;
+
+extern int server_reading;
 extern string read_logic_file;
 extern int read_block;
 extern int offset_in_block;
 extern bool is_ready_read;
 
+
 extern string desFileName;
+
 
 extern ifstream ifs;
 
-
+// fetch
 extern int fetch_id;
 extern string fetch_savepath;
 extern string fetch_filepath;
@@ -86,12 +93,21 @@ extern int fetch_blocks;
 extern const int max_blocks;
 extern int fetch_servers[200];
 
-
+// mkdir_path info
 extern string mkdir_path;
+
+// cd info
+extern string cd_path;
+
+// ls path
+extern string ls_path;
+
+// locate path
+extern string locate_path;
 
 extern FileTree* tree;
 
-// for therad communication: <serverid, range{from, count}>
+// for thread communication: <serverid, range{from, count}>
 // note that one serverid can hold server ranges
 extern multimap<int, fileRange> server_fileRangesMap;
 
