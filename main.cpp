@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < dataserver_num; i++)
     {
         // Create four folders
-        string nodepath = "DFSfiles/DataNode " + to_string(i);
+        string nodepath = "DFSfiles/DataNode_" + to_string(i);
         boost::filesystem::path node{nodepath};
         boost::filesystem::create_directory(node);
 
@@ -62,6 +62,7 @@ int main(int argc, char* argv[])
     cout.flush();
     while (getline(cin, cmd))
     {
+        bool coutOrNot = true;
         // Check if the command is right
         isTrueCmd = getCmd(cmd);
 
@@ -74,7 +75,7 @@ int main(int argc, char* argv[])
         cn_cv.notify_all();
 
         unique_lock<mutex> cn_lk(cn_m);
-        // wait for thread of nameserver finiished
+        // wait for thread of nameserver finished
         cn_cv.wait(cn_lk, []{return finish;});
         cn_lk.unlock();
 
@@ -98,23 +99,27 @@ int main(int argc, char* argv[])
                 ifs.close();
             }
         }
+        else if (type == OperType::cd) {
+            coutOrNot = false;
+        }
         // Fetch
         else if (is_ready_fetch && (type == OperType::fetch || type == OperType::fetch2))
         {
+            // if the file exists, remove the existing file
             boost::filesystem::remove(fetch_savepath);
-
+            // write savefile to the fetch_savepath
             ofstream saveFile(fetch_savepath, ios_base::out | ios_base::app);
-
+            // Traverse all blocks
             for (int i = 0; i < fetch_blocks; i++)
             {
 
-
                 ifstream blockFile;
                 int serverID = fetch_servers[i];
-                string blockFilePath = "DFSfiles/DataNode " +
+                string blockFilePath = "DFSfiles/DataNode_" +
                         to_string(serverID) + "/" + fetch_filepath + "-part" + to_string(i);
+                // cin the blockFilePath to blockfile
                 blockFile.open(blockFilePath, ios::in);
-
+                // write each blockfile to savefile
                 saveFile << blockFile.rdbuf();
 
                 if(blockFile.is_open())
@@ -131,9 +136,14 @@ int main(int argc, char* argv[])
             cout << "finish download!" << endl;
         }
 
+        // Restore finish to be false;
+
         finish = false;
 
-        cout << "MiniDFS> ";
+        if (coutOrNot == true) {
+            cout << "MiniDFS> ";
+        }
+
         cout.flush();
     }
 
