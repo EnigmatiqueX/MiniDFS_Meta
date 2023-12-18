@@ -2,6 +2,7 @@
 
 using namespace std;
 
+// split commands
 vector<string> &split(const string &s, char delim, vector<string> &elems) {
     stringstream ss(s);
     string item;
@@ -18,14 +19,20 @@ vector<string> split(const string &s, char delim) {
     return elems;
 }
 
+// Initialize FileTree
 FileTree::FileTree()
     {
         root = new TreeNode("/", false);
     }
 
-bool FileTree::find(const std::string value, bool isFile, TreeNode*& node_parent)
+bool FileTree::find(const string value, bool isFile, TreeNode*& node_parent)
     {
-        std::vector<std::string> files = split(value, '/');
+        // If the directory is root, return true
+        if (value == "/") {
+            return true;
+        }
+        // Split the path to find
+        vector<string> files = split(value, '/');
 
         TreeNode* node = root->firstChild;
 
@@ -36,7 +43,7 @@ bool FileTree::find(const std::string value, bool isFile, TreeNode*& node_parent
         {
             bool isBreakFromWhile = false;
 
-            std::string file = files[i];
+            string file = files[i];
 
             bool _isFile = isFile;
             if (i < files.size() - 1)
@@ -49,7 +56,7 @@ bool FileTree::find(const std::string value, bool isFile, TreeNode*& node_parent
                 if (node->isFile == _isFile && file.compare(node->value) == 0)
                 {
                     node_parent = node;
-                    node = node->firstChild;
+                    node = node -> firstChild;
                     isBreakFromWhile = true;
                     break;
                 }
@@ -68,28 +75,31 @@ bool FileTree::find(const std::string value, bool isFile, TreeNode*& node_parent
         return isFound;
     }
 
-void FileTree::insert(const std::string value, bool isFile)
+void FileTree::insert(const string value, bool isFile)
     {
         TreeNode *nodeParent = root;
 
-        //bool isFound = findNode(value, isFile, nodeParent);
+        // check if file path exists, at the same time update nodeparent to be the Outermost folder
         bool isFound = find(value, isFile, nodeParent);
 
 
         if (!isFound)
         {
-            std::vector<std::string> files = split(value, '/');
+            vector<std::string> files = split(value, '/');
+            // set up the new node for the new file
             TreeNode* newNode = new TreeNode(files.back(), isFile);
 
             newNode->parent = nodeParent;
 
             TreeNode *temp = nodeParent->firstChild;
 
+            // if the current folder has no child
             if (temp == nullptr)
             {
                 nodeParent->firstChild = newNode;
             }
 
+            // find the last sibling in the current folder
             else
             {
                 while (temp->nextSibling != nullptr)
@@ -104,11 +114,70 @@ void FileTree::insert(const std::string value, bool isFile)
         }
     }
 
+void FileTree::cd(string& cd_path) 
+{
+    TreeNode* nodeParent = root;
+    bool isFound = find(cd_path, false, nodeParent);
+    if (!isFound) {
+        cerr << "Error: Folder not found: " << cd_path << std::endl;
+        cout << "MiniDFS>";
+    }
+    else {
+        vector<string> files = split(cd_path, '/');
+        cout << "MiniDFS>";
+        for (auto& file : files) {
+            cout << file << ">";
+        }
+    }
+}
+
+void FileTree::ls(string& ls_path)
+{
+    TreeNode* nodeParent = root;
+    bool isFound = find(ls_path, false, nodeParent);
+    if (!isFound) {
+        cout << "Error : Folder not found: " << ls_path << endl;
+    }
+    else {
+        TreeNode* cur = nodeParent;
+        if (cur -> firstChild == nullptr) {
+            return;
+        }
+        else {
+            cout << cur -> firstChild -> value << endl;
+        }
+
+        cur = cur -> firstChild;
+
+        while (cur && cur -> nextSibling) {
+            cur = cur -> nextSibling;
+            cout << cur -> value << endl;
+        }
+
+        return;    
+    }
+
+}
+
+void FileTree::locate(string& locate_path)
+{
+
+    TreeNode* nodeParent = root;
+    bool isFound = find(locate_path, true, nodeParent);
+    if (!isFound) {
+        cout << "Error : File not found: " << locate_path << endl;
+    }
+    else {
+        cout << "File " << locate_path << " exists" << endl;
+    }
+
+}
+
 void FileTree::print(TreeNode * node)
     {
         if (node != nullptr)
         {
-            std::cout << node->value << std::endl;
+            cout << node->value << endl;
             print(node->nextSibling);
             print(node->firstChild);
         }
