@@ -2,8 +2,10 @@
 
 using namespace std;
 
+// operater()() for thread execution
 void NameServer::operator() () const
     {
+        // load metadata before
         loadMeta();
 
         for (;;)
@@ -20,27 +22,48 @@ void NameServer::operator() () const
                 StoreBlockInfo();
 
             }
+            // Assign read work
             else if (isTrueCmd && type == OperType::read)
             {
-                // assign read work
+                
                 is_ready_read = assignReadWork();
             }
-            else if (isTrueCmd && type == OperType::mkdir)
-            {
-                tree->insert(mkdir_path, false);
-            }
+            // Assign fetch work
             else if (isTrueCmd && (type == OperType::fetch || type == OperType::fetch2))
             {
                 is_ready_fetch = assignFetchWork();
             }
+            // Insert the directory
+            else if (isTrueCmd && type == OperType::mkdir)
+            {
+                tree -> insert(mkdir_path, false);
+            }
+            // Go into the subfolder
+            else if (isTrueCmd && type == OperType::cd)
+            {
+                tree -> cd(cd_path);
+            }
+            // List the files and folders inside the current folder
+            else if (isTrueCmd && type == OperType::ls)
+            {
+                tree -> ls(ls_path);
+            }
+            // List the files and folders inside the current folder
+            else if (isTrueCmd && type == OperType::locate)
+            {
+                tree -> locate(locate_path);
+            }
 
+            // Restore Namenotified 
             nameNotified = false;
 
+            // Set all datanotifiled to be true
             fill_n(dataNotified.begin(), dataserver_num, true);
-
+            // Wake up dataserver
             nd_cv.notify_all();
 
             unique_lock<mutex> nd_lk(nd_m);
+            // Wait until all datanotifiled to be false
             nd_cv.wait(nd_lk, []{
                 return all_of(dataNotified.begin(),
                               dataNotified.begin() + dataserver_num,
@@ -48,6 +71,7 @@ void NameServer::operator() () const
             });
             nd_lk.unlock();
 
+            // Continue the main thread
             finish = true;
             cn_lk.unlock();
             cn_cv.notify_all();
@@ -75,6 +99,7 @@ void NameServer::StoreBlockInfo() const
         {
             blockPathList.push_back(desFileName + "-part" + to_string(i));
         }
+        // <logicFilePath, blockfiles>
         logicFile_BlockFileMap.emplace(make_pair(desFileName, blockPathList));
 
         for (int i = 0; i < blockNum; i++)
@@ -113,7 +138,7 @@ void NameServer::StoreBlockInfo() const
         }
 
         // write metadata info to file
-        // {fileid, path, len}
+        // {fileid, {path, len}}
         writeMeta(MetaType::id_file);
         // {path, len}
         writeMeta(MetaType::file_len);
@@ -126,6 +151,7 @@ void NameServer::StoreBlockInfo() const
 
     }
 
+// Assign read work to dataserver
 bool NameServer::assignReadWork() const
     {
         // get the file info
@@ -133,24 +159,33 @@ bool NameServer::assignReadWork() const
         string logic_file_name;
         long long total_len = 0;
 
+        // Form : read file_id offset count
         if (type == OperType::read)
         {
             auto file_info = fileid_path_lenMap.find(read_fileId);
+
+            // Id doesn't exist
             if (file_info == fileid_path_lenMap.end())
             {
                 cerr << "No such file with id = " << read_fileId << endl;
                 return false;
             }
+            
+            // {fileid, {path, len}}
             else
             {
                 logic_file_name = file_info->second.first;
                 total_len = file_info->second.second;
             }
         }
+
+        // Form : read path offset count
         else if (type == OperType::read2)
         {
             logic_file_name = read_filename;
             auto file_len = path_lenMap.find(read_filename);
+
+            // File path doesn't exist
             if (file_len == path_lenMap.end())
             {
                 cerr << "No such file with path = " << read_filename << endl;
@@ -161,30 +196,33 @@ bool NameServer::assignReadWork() const
             }
         }
 
-
+        // Read size more than block size
         if (read_offset + read_count > total_len)
         {
-            cerr << "The expected reading exceeds"<< endl;
+            cerr << "Read failed: The read amount is greater than the maximum length of the data block"<< endl;
             return false;
         }
 
+        // Calculate current block id to read
         int startblock = int(floor(read_offset / block_size));
 
+        // Calculate space left for reading
         int spaceLeftOfThisBlock = int((startblock + 1) * block_size_int - read_offset);
 
+        // Cannot read accoss blocks
         if (spaceLeftOfThisBlock < read_count)
         {
-            // we assume that cannot read accoss blocks
-            cerr << "Cannot read accoss blocks"<< endl;
+            cerr << "Read failed: Cannot read accoss blocks"<< endl;
             return false;
         }
 
         read_block = startblock;
 
-        auto server_id_ite = block_serversMap.find(logic_file_name + "-part" + to_string(startblock));
-
-        server_executing_read = server_id_ite->second[0];
-
+        // Find the dataservers which contain the block
+        auto server_id_iter = block_serversMap.find(logic_file_name + "-part" + to_string(startblock));
+        // eg: {a.txt-part0, {0,1,2}} we can choose the first dataserver
+        server_reading = server_id_iter->second[0];
+        // Calculate the offset inside the block
         offset_in_block = int(read_offset - startblock * block_size_int);
 
         read_logic_file = logic_file_name;
@@ -192,11 +230,14 @@ bool NameServer::assignReadWork() const
         return true;
     }
 
+// Assign fetch work
 bool NameServer::assignFetchWork() const
     {
 
         if (type == OperType::fetch)
         {
+            // Find the file for fetch
+            // {fileid, {path, len}}
             auto fileInfo = fileid_path_lenMap.find(fetch_id);
             if (fileInfo == fileid_path_lenMap.end())
             {
@@ -206,6 +247,7 @@ bool NameServer::assignFetchWork() const
             fetch_filepath = fileInfo->second.first;
         }
 
+        // <logicFilePath, blockfiles>
         auto all_blocks = logicFile_BlockFileMap.find(fetch_filepath);
 
         if (all_blocks == logicFile_BlockFileMap.end())
@@ -214,13 +256,17 @@ bool NameServer::assignFetchWork() const
             return false;
         }
 
+        // Block numbers
         fetch_blocks = all_blocks->second.size();
 
-                // block_serversMap
+        // Traverse all blocks
         for (auto b : all_blocks->second)
         {
+            
             auto part_pos = b.find_last_of("part");
             int blockID = stoi(b.substr(part_pos + 1));
+            // {a.txt-part0, {0,1,2}}
+            // Find all blocks on the given dataserver
             auto servers = block_serversMap.find(b);
             fetch_servers[blockID] = servers->second[0];
 
@@ -233,10 +279,12 @@ bool NameServer::assignFetchWork() const
 void NameServer::loadMeta() const
     {
         ifstream id_file_meta("DFSfiles/NameNode/id-logicpath-meta");
+        // return if metadata doesn't exist
         if(!id_file_meta)
         {
             return;
         }
+
         boost::archive::text_iarchive id_file_ov(id_file_meta);
         id_file_ov >> fileid_path_lenMap;
         id_file_meta.close();
