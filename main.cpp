@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
         {
             if (isTrueCmd)
             {
-                cout << "Upload suceesful ! File id = " << fileID - 1 << endl;
+                cout << "Upload successful ! File id = " << fileID - 1 << endl;
             }
             else
             {
@@ -136,7 +136,6 @@ int main(int argc, char* argv[])
             cout << "finish download!" << endl;
         }
 
-        // Restore finish to be false;
 
         finish = false;
 

@@ -14,6 +14,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <filesystem>
+#include <set>
+
 
 #include <boost/filesystem.hpp>
 #include <boost/serialization/map.hpp>
@@ -57,13 +59,14 @@ extern bool isTrueCmd;
 
 
 // Operation type and Metadata Type
-enum class OperType {put, read, mkdir, put2, read2, fetch, fetch2, cd, ls, locate};
+enum class OperType {put, read, mkdir, put2, read2, fetch, fetch2, cd, ls, locate, readdir, stat, check};
 
 enum class MetaType {id_file, file_block, block_server, current_id, file_len};
 
 
 extern OperType type;
 extern int fileID;
+extern string timeStamp;
 
 // Read
 extern int read_fileId;
@@ -89,9 +92,11 @@ extern int fetch_id;
 extern string fetch_savepath;
 extern string fetch_filepath;
 extern bool is_ready_fetch;
+extern bool is_ready_check;
 extern int fetch_blocks;
 extern const int max_blocks;
 extern int fetch_servers[200];
+
 
 // mkdir_path info
 extern string mkdir_path;
@@ -101,6 +106,9 @@ extern string cd_path;
 
 // ls path
 extern string ls_path;
+
+// readdir path
+extern string readdir_path;
 
 // locate path
 extern string locate_path;
@@ -126,7 +134,7 @@ a-part0在0, 1; a-part1在1,2; a-part2在 2,3
 // for metadata: <fildId, [logicFilePath, length]>
 extern map<int, pair<string, long long>> fileid_path_lenMap;
 extern map<string, long long> path_lenMap;
-
+extern std::set<std::string> filenameSet;
 
 // for metadata: <logicFilePath, blockfiles>
 extern map<string, vector<string>> logicFile_BlockFileMap;

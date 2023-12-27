@@ -159,6 +159,33 @@ void FileTree::ls(string& ls_path)
 
 }
 
+void FileTree::readdir(string& readdir_path)
+{
+    TreeNode* nodeParent = root;
+    bool isFound = find(readdir_path, false, nodeParent);
+    if (!isFound) {
+        cout << "Error : Folder not found: " << readdir_path << endl;
+    }
+    else {
+        TreeNode* cur = nodeParent;
+        if (cur -> firstChild == nullptr) {
+            return;
+        }
+        else {
+            cout << cur -> firstChild -> value << endl;
+        }
+
+        cur = cur -> firstChild;
+
+        while (cur && cur -> nextSibling) {
+            cur = cur -> nextSibling;
+            cout << cur -> value << endl;
+        }
+
+        return;    
+    }
+}
+
 void FileTree::locate(string& locate_path)
 {
 

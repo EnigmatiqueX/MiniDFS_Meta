@@ -1,5 +1,10 @@
 #include "Name_server.h"
 
+#include <iostream>
+#include <fstream>
+#include <ctime>
+#include <string>
+
 using namespace std;
 
 // operater()() for thread execution
@@ -53,6 +58,24 @@ void NameServer::operator() () const
             {
                 tree -> locate(locate_path);
             }
+            // List the files and folders inside the current folder
+            else if (isTrueCmd && type == OperType::readdir)
+            {
+                // tree -> readdir(readdir_path);
+                ;
+            }
+            // Print the metadata
+            else if (isTrueCmd && type == OperType::stat)
+            {
+                ;
+            }
+            // Assign check work
+            else if (isTrueCmd && (type == OperType::check))
+            {
+                ;
+            }
+            
+
 
             // Restore Namenotified 
             nameNotified = false;
@@ -90,8 +113,11 @@ void NameServer::StoreBlockInfo() const
         fileid_path_lenMap.emplace(make_pair(fileID, make_pair(desFileName, length)));
         path_lenMap.emplace(make_pair(desFileName, length));
 
-        // Update fileId
+        // fileid_path_lenMapdate fileId
         fileID++;
+
+        std::time_t currentTime = std::time(nullptr);
+        std::string timeStamp = std::ctime(&currentTime);
 
         // Store block path 
         vector<string> blockPathList;
@@ -148,6 +174,20 @@ void NameServer::StoreBlockInfo() const
         writeMeta(MetaType::block_server);
         // {fileid++}
         writeMeta(MetaType::current_id);
+
+        // std::ofstream ofs("DFSfiles/NameNode/meta");
+        // if (ofs.is_open()) {
+        //     std::time_t currentTime = std::time(nullptr);
+        //     std::string timestamp = std::ctime(&currentTime);
+
+        //     ofs << desFileName << " " << to_string(fileID) << " " << timestamp;
+        //     // boost::archive::text_oarchive ov(ofs);
+        //     // ov << desFileName << " " << to_string(fileID) << " " << timestamp << "\n";
+
+        //     ofs.close();
+        // } else {
+        //     std::cerr << "Error: stat" << std::endl;
+        // }
 
     }
 
@@ -275,6 +315,7 @@ bool NameServer::assignFetchWork() const
         return true;
     }
 
+
 // Read metadata
 void NameServer::loadMeta() const
     {
@@ -321,6 +362,36 @@ void NameServer::writeMeta(MetaType type) const
             boost::archive::text_oarchive ov(metaOfs);
             ov << fileid_path_lenMap;
             metaOfs.close();
+
+            std::ofstream ofs("DFSfiles/NameNode/meta", std::ios::app);
+            // std::ofstream dir("DFSfiles/NameNode/dir", std::ios::app);
+            if (ofs.is_open()) {
+                std::time_t currentTime = std::time(nullptr);
+                std::string timestamp = std::ctime(&currentTime);
+
+                // ofs << "first: " << to_string(fileid_path_lenMap.end()->first) << " second: " << fileid_path_lenMap.end()->second.first << " " << timestamp;
+
+                auto it = fileid_path_lenMap.begin();
+                auto it_final = fileid_path_lenMap.begin();
+                for (it = fileid_path_lenMap.begin(); it != fileid_path_lenMap.end(); it++){
+                    // cout << it->first << " " << it->second.first << endl;
+                    it_final = it;
+                }
+
+                // cout << "loop finished" << endl;
+                // cout << it_final->first << " " << it_final->second.first << endl;
+                ofs << "File id: " << it_final->first << "\tName: " << it_final->second.first << "\tFilesize: " << it_final->second.second << "\tTime: " << timestamp;
+                // dir << it_final->second.first;
+                filenameSet.insert(it_final->second.first);
+
+                // cout << "write complete" << endl;
+
+                ofs.close();
+                // dir.close();
+            } else {
+                std::cerr << "Error: stat" << std::endl;
+            }
+
         }
         else if (type == MetaType::file_len) {
             std::ofstream metaOfs("DFSfiles/NameNode/logicpath-len-meta");
@@ -341,6 +412,38 @@ void NameServer::writeMeta(MetaType type) const
             boost::archive::text_oarchive ov(metaOfs);
             ov << block_serversMap;
             metaOfs.close();
+
+            // std::ofstream ofs("DFSfiles/NameNode/block", std::ios::app);
+            std::ofstream ofs("DFSfiles/NameNode/block");
+            if (ofs.is_open()) {
+
+                auto it = block_serversMap.begin();
+                for (it = block_serversMap.begin(); it != block_serversMap.end(); it++){
+                    // // cout << it->first << " " << it->second.first << endl;
+                    // it_final = it;
+
+                    std::vector<int> vec = it->second;
+                    string datanode = "";
+                    for (auto& element : vec) {
+                        datanode += "DataNode";
+                        datanode += to_string(element);
+                        datanode += " ";
+                    }
+                    ofs << "" << it->first << "\t" << datanode << "\n";
+
+                }
+
+                // cout << "loop finished" << endl;
+                // cout << it_final->first << " " << it_final->second.first << endl;
+
+                // ofs << "" << it_final->first << "\t" << it_final->second;
+
+                ofs.close();
+
+            } else {
+                std::cerr << "Error: stat" << std::endl;
+            }
+
         }
         else if (type == MetaType::current_id)
         {

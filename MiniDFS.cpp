@@ -57,6 +57,7 @@ int fetch_id;
 string fetch_savepath;
 string fetch_filepath;
 bool is_ready_fetch;
+bool is_ready_check;
 int fetch_blocks;
 const int max_blocks = 200;
 int fetch_servers[max_blocks];
@@ -69,6 +70,12 @@ string cd_path;
 
 // ls path
 string ls_path;
+
+// readdir path
+string readdir_path;
+
+// readdir path
+string stat_path;
 
 // locate path
 string locate_path;
@@ -94,7 +101,7 @@ a-part0在0, 1; a-part1在1,2; a-part2在 2,3
 // for metadata: <fildId, [logicFilePath, length]>
 map<int, pair<string, long long>> fileid_path_lenMap;
 map<string, long long> path_lenMap;
-
+std::set<std::string> filenameSet;
 
 // for metadata: <logicFilePath, blockfiles>
 map<string, vector<string>> logicFile_BlockFileMap;
@@ -105,7 +112,7 @@ map<string, vector<int>> block_serversMap;
 bool getCmd(const string& cmd)
 {
 
-    vector<string> possibleCmds = {"put", "read", "mkdir", "put2", "read2", "quit", "fetch", "fetch2", "cd", "ls", "locate"};
+    vector<string> possibleCmds = {"put", "read", "mkdir", "put2", "read2", "quit", "fetch", "fetch2", "cd", "ls", "locate", "readdir", "stat", "check"};
 
     vector<string> x = split(cmd, ' ');
 
@@ -299,6 +306,86 @@ bool getCmd(const string& cmd)
 
         locate_path = x[1];
     }
+
+    // readdir : readdir
+    else if(x[0].compare(possibleCmds[11]) == 0){
+        type = OperType::readdir;
+
+        // for (const auto& str : filenameSet) {
+        //     std::cout << str << std::endl;
+        // }
+
+        for (const auto& path : filenameSet) {
+            size_t lastSlash = path.find_last_of('/');
+            if (lastSlash != std::string::npos) {
+                std::string directory = path.substr(0, lastSlash);
+                std::string fileName = path.substr(lastSlash + 1);
+
+                std::cout << "Directory: " << directory << "\n";
+                std::cout << "File name: " << fileName << "\n";
+            } else {
+                std::cout << "Directory: /" << "\n";
+                std::cout << "File name: " << path << std::endl;
+            }
+        }
+
+    }
+
+    // stat : read metadata status of filename, file_id and time
+    else if (x[0].compare(possibleCmds[12]) == 0)
+    {
+        type = OperType::stat;
+
+        // cout << "Metadata" << endl;
+        // ifstream idfilemeta("DFSfiles/NameNode/id-logicpath-meta");
+        string line;
+        // while (std::getline(idfilemeta, line)) {
+        //     std::cout << line << std::endl;
+        // }
+        // idfilemeta.close();
+
+        cout << "Metadata stat" << endl;
+        ifstream meta("DFSfiles/NameNode/meta");
+        while (std::getline(meta, line)) {
+            std::cout << line << std::endl;
+        }
+        meta.close();
+
+    }
+
+    else if (x[0].compare(possibleCmds[13]) == 0)
+    {
+        type = OperType::check;
+        std::cout << "Checking" << std::endl;
+        // check files
+        if (x.size() != 2)
+        {
+            cerr << "Error: Usage: check file_id" << endl;
+            return false;
+        }
+
+        fetch_savepath = x[1];
+
+        string line;
+
+        ifstream block("DFSfiles/NameNode/block");
+        if (block.is_open()){
+            while (std::getline(block, line)) {
+                if (line.find(fetch_savepath) != std::string::npos) {
+                    std::cout << line << std::endl;
+                }
+                
+            }
+            block.close();
+
+        } else {
+            cout << "Error opening file" << endl;
+        }
+
+
+    }
+
+
 
     return true;
 }

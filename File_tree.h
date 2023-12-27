@@ -49,6 +49,7 @@ public:
     void insert(const string value, bool isFile);
     void cd(string& cd_path);
     void ls(string& ls_path);
+    void readdir(string& readdir_path);
     void locate(string& locate_path);
     void print(TreeNode * node);
     void printall();
